@@ -90,11 +90,7 @@ export function CustomConnectButton() {
                     {chain.name}
                   </Button>
 
-                  <Button
-                    onClick={openAccountModal}
-                    size="lg"
-                    className="flex-1"
-                  >
+                  <Button onClick={openAccountModal} size="lg" className="flex-1">
                     {account.displayName}
                   </Button>
                 </div>
