@@ -4,7 +4,7 @@ import { useState, useMemo } from "react"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { ProjectCard } from "@/components/ProjectCard"
+import { ProjectCard } from "@/components/project-card"
 import { mockProjects } from "@/data/mockProjects"
 
 const projectTypes = [
@@ -115,7 +115,9 @@ export default function ProyectosPage() {
         <div className="text-center mb-6">
           <p className="text-sm text-muted-foreground">
             {filteredProjects.length}{" "}
-            {filteredProjects.length === 1 ? "proyecto encontrado" : "proyectos encontrados"}
+            {filteredProjects.length === 1
+              ? "proyecto encontrado"
+              : "proyectos encontrados"}
           </p>
         </div>
 

@@ -23,7 +23,7 @@ import {
   ArrowUpRight,
 } from "lucide-react"
 import { toast } from "sonner"
-import { CustomConnectButton } from "@/components/CustomConnectButton"
+import { CustomConnectButton } from "@/components/custom-connect-button"
 
 // Mock user investments
 const userInvestments = [
