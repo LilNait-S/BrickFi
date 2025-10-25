@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { faqs, features } from "@/constants"
@@ -38,7 +39,7 @@ export default function Home() {
 
               {/* Main Headline */}
               <div className="space-y-4">
-                <h1 className="text-6xl md:text-7xl lg:text-8xl font-black leading-none tracking-tight">
+                <h1 className="text-6xl md:text-7xl font-black leading-none tracking-tight">
                   <span className="block text-white">El futuro</span>
                   <span className="block text-gradient">inmobiliario</span>
                   <span className="block text-white">es ahora</span>
@@ -48,7 +49,7 @@ export default function Home() {
               </div>
 
               {/* Subtitle */}
-              <p className="text-xl md:text-2xl text-slate-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">
+              <p className="text-xl text-slate-300 leading-relaxed max-w-2xl mx-auto lg:mx-0">
                 <span className="font-semibold text-white">BrickFi</span>{" "}
                 democratiza la inversión inmobiliaria a través de tokenización
                 blockchain.{" "}
@@ -80,14 +81,50 @@ export default function Home() {
                 <p className="text-sm text-slate-400 font-medium">
                   Más de 500+ inversores confían en nosotros
                 </p>
-                <div className="flex items-center gap-1 justify-center lg:justify-start">
-                  {[...Array(5)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full bg-linear-to-r from-primary/30 to-secondary/30 border-2 border-white/20 -ml-1 first:ml-0"
+                <div className="*:data-[slot=avatar]:ring-background flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:grayscale items-center">
+                  <Avatar>
+                    <AvatarImage
+                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"
+                      alt="Investor 1"
                     />
-                  ))}
-                  <span className="ml-3 text-sm text-slate-300">+495 más</span>
+                    <AvatarFallback>JD</AvatarFallback>
+                  </Avatar>
+                  <Avatar>
+                    <AvatarImage
+                      src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop"
+                      alt="Investor 2"
+                    />
+                    <AvatarFallback>MR</AvatarFallback>
+                  </Avatar>
+                  <Avatar>
+                    <AvatarImage
+                      src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop"
+                      alt="Investor 3"
+                    />
+                    <AvatarFallback>SK</AvatarFallback>
+                  </Avatar>
+                  <Avatar>
+                    <AvatarImage
+                      src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop"
+                      alt="Investor 4"
+                    />
+                    <AvatarFallback>AL</AvatarFallback>
+                  </Avatar>
+                  <Avatar>
+                    <AvatarImage
+                      src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=100&h=100&fit=crop"
+                      alt="Investor 5"
+                    />
+                    <AvatarFallback>EM</AvatarFallback>
+                  </Avatar>
+                  <Avatar>
+                    <AvatarImage
+                      src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop"
+                      alt="Investor 6"
+                    />
+                    <AvatarFallback>RG</AvatarFallback>
+                  </Avatar>
+                  <span className="ml-5 text-sm text-slate-300">+494 más</span>
                 </div>
               </div>
             </div>
@@ -97,10 +134,6 @@ export default function Home() {
               <div className="relative">
                 {/* Main Stats Card */}
                 <div className="relative bg-linear-to-br from-white/10 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/20 p-8 shadow-2xl">
-                  <div className="absolute -top-6 -right-6 w-12 h-12 bg-linear-to-r from-primary to-secondary rounded-2xl flex items-center justify-center shadow-xl">
-                    <Building2 className="h-6 w-6 text-white" />
-                  </div>
-
                   <div className="space-y-8">
                     <div className="text-center pb-4 border-b border-white/10">
                       <h3 className="text-2xl font-bold text-white mb-2">
@@ -161,14 +194,6 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Floating Elements */}
-                <div className="absolute -bottom-4 -left-4 bg-linear-to-r from-primary to-secondary rounded-2xl p-4 shadow-xl">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-white">12%+</div>
-                    <div className="text-xs text-white/80">APY Min</div>
                   </div>
                 </div>
 

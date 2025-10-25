@@ -1,9 +1,9 @@
 "use client"
 
 import { desktopMenuItems } from "@/constants/menu-list"
-import { ConnectButton } from "@rainbow-me/rainbowkit"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { CustomConnectButton } from "./CustomConnectButton"
 
 export function Navbar() {
   const pathname = usePathname()
@@ -13,9 +13,7 @@ export function Navbar() {
       <div className="container flex h-16 items-center justify-between mx-auto">
         <div className="flex grow basis-0">
           <Link href="/" className="gap-2 font-bold text-xl items-center">
-            <span className="text-gradient">
-              BrickFi
-            </span>
+            <span className="text-gradient">BrickFi</span>
           </Link>
         </div>
 
@@ -40,7 +38,7 @@ export function Navbar() {
         </div>
 
         <div className="flex grow basis-0 gap-4 justify-end">
-          <ConnectButton />
+          <CustomConnectButton />
         </div>
       </div>
     </nav>

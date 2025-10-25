@@ -27,7 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             accentColorForeground: "oklch(0.985 0 0)",
             borderRadius: "medium",
           })}
-          modalSize="compact"
+          modalSize="wide"
           initialChain={sonicTestnet.id}
         >
           {children}
