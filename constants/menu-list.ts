@@ -11,6 +11,11 @@ export const desktopMenuItems = [
     label: "Panel de usuario",
     icon: LayoutDashboard,
   },
+  {
+    href: "/admin",
+    label: "Panel de administración",
+    icon: LayoutDashboard,
+  },
 ]
 
 export const mobileMenuItems = [
