@@ -1,11 +1,11 @@
 "use client"
 
-import { ProgressBar } from "@/components/ProgressBar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Project } from "@/data/mockProjects"
 import { Clock, MapPin, TrendingUp } from "lucide-react"
 import Link from "next/link"
+import { ProgressBar } from "./progress-bar"
 
 interface ProjectCardProps {
   project: Project
