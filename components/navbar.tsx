@@ -3,7 +3,7 @@
 import { desktopMenuItems } from "@/constants/menu-list"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { CustomConnectButton } from "./CustomConnectButton"
+import { CustomConnectButton } from "./custom-connect-button"
 
 export function Navbar() {
   const pathname = usePathname()
@@ -37,7 +37,7 @@ export function Navbar() {
           })}
         </div>
 
-        <div className="flex grow basis-0 gap-4 justify-end">
+        <div className="flex grow basis-0 gap-4 justify-end items-center">
           <CustomConnectButton />
         </div>
       </div>
