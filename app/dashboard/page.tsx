@@ -139,7 +139,7 @@ export default function DashboardPage() {
         {/* Stats */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="gradient-card border-primary/20">
-            <CardContent className="pt-6 space-y-3">
+            <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Invertido
@@ -159,7 +159,7 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="gradient-card border-primary/20">
-            <CardContent className="pt-6 space-y-3">
+            <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
                   Valor Actual
@@ -178,7 +178,7 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="gradient-card border-primary/20">
-            <CardContent className="pt-6 space-y-3">
+            <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
                   Ganancia Total
@@ -195,7 +195,7 @@ export default function DashboardPage() {
           </Card>
 
           <Card className="gradient-card border-primary/20">
-            <CardContent className="pt-6 space-y-3">
+            <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
                   NFTs
@@ -230,7 +230,7 @@ export default function DashboardPage() {
 
           {userInvestments.length === 0 ? (
             <Card>
-              <CardContent className="pt-6 text-center space-y-4 py-12">
+              <CardContent className="text-center space-y-4 py-12">
                 <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center">
                   <TrendingUp className="h-8 w-8 text-muted-foreground" />
                 </div>
