@@ -3,7 +3,7 @@ import { Address } from "viem"
 import { TOKENIZER_ABI } from "./abi"
 
 export const TokenizerConfig = {
-  address: "0x56C4F99Eead221C6C281058718a7004bF0726A34" as Address,
+  address: "0x6BE3e2E19caA30b80a95cd2b615e9DDa87ABEdce" as Address,
   abi: TOKENIZER_ABI,
   chainId: sonicTestnet.id,
 } as const

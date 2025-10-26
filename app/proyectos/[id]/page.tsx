@@ -235,13 +235,15 @@ export default function ProjectDetail() {
   // Cálculos de ROI más detallados
   const calculateROI = () => {
     const possibleReturnRate = projectData.possibleReturn / 100 // Convertir % a decimal
-    const expectedReturn = totalSoldUSDC * (1 + possibleReturnRate) // Usar totalSoldUSDC en lugar de totalFractionsUSDC
-    const netProfit = expectedReturn - totalSoldUSDC // Usar totalSoldUSDC para el cálculo correcto
-    const roiPercentage =
-      totalSoldUSDC > 0 ? (netProfit / totalSoldUSDC) * 100 : 0 // Evitar división por cero
+
+    // Para mostrar ganancia potencial, usar el objetivo total si no hay inversiones
+    const baseAmount = totalSoldUSDC > 0 ? totalSoldUSDC : totalFractionsUSDC
+    const expectedReturn = baseAmount * (1 + possibleReturnRate)
+    const netProfit = expectedReturn - baseAmount
+    const roiPercentage = projectData.possibleReturn // Usar directamente el porcentaje del contrato
 
     return {
-      investmentAmount: totalSoldUSDC, // Mostrar la inversión real, no el objetivo
+      investmentAmount: totalSoldUSDC > 0 ? totalSoldUSDC : totalFractionsUSDC, // Mostrar objetivo si no hay inversiones
       expectedReturn: expectedReturn,
       netProfit: netProfit,
       roiPercentage: roiPercentage,
