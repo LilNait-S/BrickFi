@@ -1,36 +1,35 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BrickFi - Tokenización Inmobiliaria en Scroll
 
-## Getting Started
+## Descripción
 
-First, run the development server:
+DApp híbrida que permite a constructoras tokenizar sus proyectos inmobiliarios, ofreciendo a inversionistas tokens ERC-20 respaldados por activos reales, con retorno on-chain y liquidez descentralizada.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Tecnologías
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Blockchain: Scroll
+- Smart Contracts: Solidity (ERC-20 + ICO Manager + Return Logic)
+- Frontend: Next.js / React
+- Backend: Node.js
+- Wallet: MetaMask / Scroll Testnet
+- Integraciones: Uniswap SDK
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Flujo principal
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Admin (KYC verificado) crea proyecto desde dashboard.
+2. Smart contract se despliega con parámetros del proyecto.
+3. Inversionistas (KYC verificados) compran tokens.
+4. Al alcanzar el softcap, se crea un pool Token/USDT.
+5. Al finalizar el proyecto, se devuelve el retorno on-chain.
+6. Inversionistas reclaman NFT Soulbound como certificado.
 
-## Learn More
+## Funcionalidades
 
-To learn more about Next.js, take a look at the following resources:
+- Creación de proyectos tokenizados (panel admin).
+- Smart contracts verificados en Scroll testnet.
+- Dashboard de inversionista con visualización de retorno.
+- Integración con Uniswap para liquidez automática.
+- Reclamación de NFT Soulbound de participación.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Equipo
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+BrickFi Dev Team - EthLima Hackathon 2025
