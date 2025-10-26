@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { ProgressBar } from "@/components/progress-bar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -16,7 +15,14 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { dataMock } from "@/data/images"
-import { useInvestInProject } from "@/services/pool/mutate"
+import {
+  useClaimAdmin,
+  useFinalizeProjectDemo,
+  useInvestInProject,
+  useReclamarGanancias,
+  useReembolso,
+  useRegresarFondosAdmin,
+} from "@/services/pool/mutate"
 import { PUBLIC_PHASE_LABELS, useGetProject } from "@/services/pool/query"
 import { useApproveUSDC, useMintUSDC } from "@/services/usdc/mutate"
 import { useGetUSDCAllowance, useGetUSDCBalance } from "@/services/usdc/query"
@@ -31,11 +37,12 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
+import { useState } from "react"
 import { toast } from "sonner"
 import { Address, formatUnits, parseUnits } from "viem"
 import { useAccount } from "wagmi"
-import { ProjectDetailSkeleton } from "./skeleton"
 import { ProjectDetailError } from "./error-proyecto"
+import { ProjectDetailSkeleton } from "./skeleton"
 
 // Función para mapear un address del contrato a un ID consistente del mock de imágenes
 function getImageMockFromAddress(address: Address): (typeof dataMock)[0] {
@@ -91,20 +98,105 @@ export default function ProjectDetail() {
   const { execute: mint } = useMintUSDC()
   const { data: usdcBalance } = useGetUSDCBalance()
 
+  // Hook para finalizar proyecto (demo)
+  const { execute: finalize } = useFinalizeProjectDemo({
+    contractAddress: params.id,
+    options: {
+      onSuccess: () => {
+        toast.success("¡Proyecto finalizado para demo!")
+      },
+      onError: (error) => {
+        toast.error(error.message || "Error al finalizar el proyecto")
+      },
+    },
+  })
+
+  const { execute: reembolso } = useReembolso({
+    contractAddress: params.id,
+    options: {
+      onSuccess: () => {
+        toast.success("¡Reembolso exitoso!")
+      },
+      onError: (error) => {
+        toast.error(error.message || "Error al realizar el reembolso")
+      },
+    },
+  })
+
+  const { execute: claimAdmin } = useClaimAdmin({
+    contractAddress: params.id,
+    options: {
+      onSuccess: () => {
+        toast.success("¡Reclamo de administrador exitoso!")
+      },
+      onError: (error) => {
+        toast.error(error.message || "Error al reclamar administrador")
+      },
+    },
+  })
+
+  // Calcular el monto exacto a regresar basado en el ROI del proyecto
+  const calculateReturnAmount = () => {
+    if (!projectData) return { normal: "0", wei: BigInt(0) }
+
+    const totalSoldAmount = projectData.totalSold // En wei (BigInt)
+    const returnPercentage = projectData.possibleReturn // Porcentaje (número)
+
+    // Calcular: totalSold * (1 + returnPercentage/100)
+    const returnMultiplier = BigInt(
+      Math.floor((1 + returnPercentage / 100) * 1000)
+    ) // Multiplicar por 1000 para precision
+    const exactReturnAmount =
+      (totalSoldAmount * returnMultiplier) / BigInt(1000)
+
+    // Formatear para mostrar valor normal
+    const normalValue = formatUnits(exactReturnAmount, 18)
+
+    return {
+      normal: normalValue, // Valor formateado (ej: "11500.0")
+      wei: exactReturnAmount, // Valor en wei (ej: 11500000000000000000000n)
+    }
+  }
+
+  const { execute: regresarFondos } = useRegresarFondosAdmin({
+    contractAddress: params.id,
+    amountToReturn: calculateReturnAmount().wei,
+    options: {
+      onSuccess: () => {
+        toast.success("¡Fondos regresados exitosamente!")
+      },
+      onError: (error) => {
+        toast.error(error.message || "Error al regresar fondos")
+      },
+    },
+  })
+
+  const { execute: reclamarGanancias } = useReclamarGanancias({
+    contractAddress: params.id,
+    options: {
+      onSuccess: () => {
+        toast.success("¡Fondos reclamados exitosamente!")
+      },
+      onError: (error) => {
+        toast.error(error.message || "Error al reclamar fondos")
+      },
+    },
+  })
+
   // Mostrar skeleton mientras carga
   if (isLoadingProject) {
     return <ProjectDetailSkeleton />
   }
 
-  // // Mostrar error si hay un error
-  // if (projectError) {
-  //   return (
-  //     <ProjectDetailError
-  //       error={projectError}
-  //       onRetry={() => window.location.reload()}
-  //     />
-  //   )
-  // }
+  // Mostrar error si hay un error
+  if (projectError) {
+    return (
+      <ProjectDetailError
+        error={projectError}
+        onRetry={() => window.location.reload()}
+      />
+    )
+  }
 
   // Si no hay datos del proyecto después de cargar
   if (!projectData) {
@@ -143,12 +235,13 @@ export default function ProjectDetail() {
   // Cálculos de ROI más detallados
   const calculateROI = () => {
     const possibleReturnRate = projectData.possibleReturn / 100 // Convertir % a decimal
-    const expectedReturn = totalFractionsUSDC * (1 + possibleReturnRate)
-    const netProfit = expectedReturn - totalFractionsUSDC
-    const roiPercentage = (netProfit / totalFractionsUSDC) * 100
+    const expectedReturn = totalSoldUSDC * (1 + possibleReturnRate) // Usar totalSoldUSDC en lugar de totalFractionsUSDC
+    const netProfit = expectedReturn - totalSoldUSDC // Usar totalSoldUSDC para el cálculo correcto
+    const roiPercentage =
+      totalSoldUSDC > 0 ? (netProfit / totalSoldUSDC) * 100 : 0 // Evitar división por cero
 
     return {
-      investmentAmount: totalFractionsUSDC,
+      investmentAmount: totalSoldUSDC, // Mostrar la inversión real, no el objetivo
       expectedReturn: expectedReturn,
       netProfit: netProfit,
       roiPercentage: roiPercentage,
@@ -195,6 +288,12 @@ export default function ProjectDetail() {
           <div className="flex items-center gap-6">
             <Button onClick={mint}>Mintear USDC</Button>
             <span>{formatUnits(usdcBalance ?? BigInt(0), 18)}</span>
+            <Button onClick={finalize}>Adelantar tiempo</Button>
+            <Button onClick={claimAdmin}>Reclamar fondos siendo Admin</Button>
+            <Button onClick={regresarFondos}>
+              Regresar Fondos $
+              {Number(calculateReturnAmount().normal).toLocaleString()}
+            </Button>
           </div>
         </div>
 
@@ -281,10 +380,56 @@ export default function ProjectDetail() {
 
               <Card className="gradient-card border-primary/20">
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Tiempo Restante
-                  </p>
-                  <p className="text-3xl font-bold">{timeRemaining}</p>
+                  {projectData.currentPhase === 0 ? (
+                    // Fase de venta - Mostrar tiempo restante para comprar
+                    <>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Tiempo Restante
+                      </p>
+                      <p className="text-3xl font-bold">{timeRemaining}</p>
+                    </>
+                  ) : projectData.currentPhase === 1 ||
+                    projectData.currentPhase === 2 ? (
+                    // Fase de construcción - Mostrar tiempo para reclamar
+                    <>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Tiempo para Reclamar
+                      </p>
+                      <p className="text-xl font-bold">
+                        {(() => {
+                          const currentTimestamp = Math.floor(Date.now() / 1000)
+                          const totalDays = Math.ceil(
+                            (Number(projectData.maxRepaymentTime) -
+                              currentTimestamp) /
+                              (60 * 60 * 24)
+                          )
+
+                          if (totalDays <= 0) {
+                            return "Disponible"
+                          } else if (totalDays < 30) {
+                            return `${totalDays}d`
+                          } else {
+                            const months = Math.floor(totalDays / 30)
+                            return `${months}m ${totalDays % 30}d`
+                          }
+                        })()}
+                      </p>
+                    </>
+                  ) : (
+                    // Otras fases - Mostrar estado
+                    <>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Estado del Proyecto
+                      </p>
+                      <p className="text-2xl font-bold">
+                        {
+                          PUBLIC_PHASE_LABELS[
+                            projectData.currentPhase as keyof typeof PUBLIC_PHASE_LABELS
+                          ]
+                        }
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -352,7 +497,64 @@ export default function ProjectDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {projectData.currentPhase !== 0 ? (
+                {projectData.currentPhase === 4 ? (
+                  // Estado de reembolso - Mostrar botón de reembolso
+                  <>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        El proyecto está en estado de reembolso. Los inversores
+                        pueden reclamar su dinero de vuelta.
+                      </AlertDescription>
+                    </Alert>
+
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={reembolso}
+                      disabled={!userAddress}
+                    >
+                      {!userAddress ? "Conectar Wallet" : "Solicitar Reembolso"}
+                    </Button>
+
+                    <div className="text-xs text-muted-foreground space-y-1 pt-2">
+                      <p>• Recibirás de vuelta tu inversión en USDC</p>
+                      <p>
+                        • Los tokens del proyecto serán quemados automáticamente
+                      </p>
+                    </div>
+                  </>
+                ) : projectData.currentPhase === 3 ? (
+                  // Estado completado - Mostrar botón para reclamar ganancias
+                  <>
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        ¡Proyecto completado! Los inversores pueden reclamar sus
+                        ganancias y ROI.
+                      </AlertDescription>
+                    </Alert>
+
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={reclamarGanancias}
+                      disabled={!userAddress}
+                    >
+                      {!userAddress ? "Conectar Wallet" : "Reclamar Ganancias"}
+                    </Button>
+
+                    <div className="text-xs text-muted-foreground space-y-1 pt-2">
+                      <p>
+                        • Recibirás tu inversión inicial + ganancias en USDC
+                      </p>
+                      <p>
+                        • Los tokens del proyecto serán quemados automáticamente
+                      </p>
+                      <p>• ROI del {projectData.possibleReturn}% incluido</p>
+                    </div>
+                  </>
+                ) : projectData.currentPhase !== 0 ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
@@ -566,46 +768,48 @@ export default function ProjectDetail() {
                           {formatDate(Number(projectData.buyingPeriodEnd))}
                         </span>
                       </div>
-                      {/* <div className="flex justify-between items-center p-3 rounded-lg bg-orange-50 border border-orange-200">
-                        <span className="text-orange-700">
-                          Plazo Máximo Devolución:
-                        </span>
-                        <span className="font-bold text-orange-700">
-                          {Math.ceil(Number(projectData.maxRepaymentTime) / (60 * 60 * 24))} días máx.
-                        </span>
-                      </div> */}
-                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                        <span className="text-muted-foreground">
-                          Duración del Proyecto:
-                        </span>
-                        <span className="font-bold text-primary">
-                          {(() => {
-                            const totalDays = Math.ceil(
-                              (Number(projectData.maxRepaymentTime) -
-                                Number(projectData.buyingPeriodEnd)) /
-                                (60 * 60 * 24)
-                            )
-                            const months = Math.floor(totalDays / 30)
-                            const remainingDays = totalDays % 30
 
-                            if (months > 0 && remainingDays > 0) {
-                              return `${months} ${
-                                months === 1 ? "mes" : "meses"
-                              } y ${remainingDays} ${
-                                remainingDays === 1 ? "día" : "días"
-                              }`
-                            } else if (months > 0) {
-                              return `${months} ${
-                                months === 1 ? "mes" : "meses"
-                              }`
-                            } else {
-                              return `${totalDays} ${
-                                totalDays === 1 ? "día" : "días"
-                              }`
-                            }
-                          })()}
-                        </span>
-                      </div>
+                      {/* Solo mostrar cuando está en construcción (phases 1 o 2) */}
+                      {(projectData.currentPhase === 1 ||
+                        projectData.currentPhase === 2) && (
+                        <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                          <span className="text-muted-foreground">
+                            Tiempo Restante para Devolución:
+                          </span>
+                          <span className="font-bold text-primary">
+                            {(() => {
+                              const currentTimestamp = Math.floor(
+                                Date.now() / 1000
+                              )
+                              const totalDays = Math.ceil(
+                                (Number(projectData.maxRepaymentTime) -
+                                  currentTimestamp) /
+                                  (60 * 60 * 24)
+                              )
+                              const months = Math.floor(totalDays / 30)
+                              const remainingDays = totalDays % 30
+
+                              if (totalDays <= 0) {
+                                return "Plazo vencido"
+                              } else if (months > 0 && remainingDays > 0) {
+                                return `${months} ${
+                                  months === 1 ? "mes" : "meses"
+                                } y ${remainingDays} ${
+                                  remainingDays === 1 ? "día" : "días"
+                                } restantes`
+                              } else if (months > 0) {
+                                return `${months} ${
+                                  months === 1 ? "mes" : "meses"
+                                } restantes`
+                              } else {
+                                return `${totalDays} ${
+                                  totalDays === 1 ? "día" : "días"
+                                } restantes`
+                              }
+                            })()}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

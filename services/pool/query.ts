@@ -1,4 +1,4 @@
-import { useReadContracts } from "wagmi"
+import { useAccount, useReadContract, useReadContracts } from "wagmi"
 import { Address } from "viem"
 import { poolSummaryConfig } from "./config"
 import { useGetAllCreatedInstances } from "@/services/tokenizer/query"
@@ -10,7 +10,7 @@ export interface Project {
   softCapAmount: bigint // Monto mínimo a recaudar
   startTime: bigint // Tiempo de inicio de la venta
   buyingPeriodEnd: bigint // Tiempo en el que acaba la habilitacion de compra
-  
+
   maxRepaymentTime: bigint // El tiempo en el que se devolverá el dinero
   possibleReturn: number // uint16 retorna number, que representa el porcentaje de retorno
   url: string // La web del proyecto
@@ -19,7 +19,6 @@ export interface Project {
   totalReInvested: bigint // Monto a reinvertir en un futuro (la empresa)
   actualRepaymentTime: bigint // Tiempo, empieza a contar cuando está en la phase de espera (la empresa)
   currentPhase: number // Fase actual del proyecto (0-4)
-  
 }
 
 // Función para formatear el resultado
@@ -317,3 +316,20 @@ export const PUBLIC_PHASE_LABELS = {
   [PROJECT_PHASES.CLAIM_READY]: "Completado",
   [PROJECT_PHASES.REFUND_AVAILABLE]: "Reembolso",
 } as const
+
+export function useGetBalance({
+  contractAddress,
+  userAddress,
+}: { contractAddress?: Address; userAddress?: Address } = {}) {
+  const { address: account } = useAccount()
+  const targetAddress = userAddress || account
+  return useReadContract({
+    ...poolSummaryConfig,
+    address: contractAddress,
+    functionName: "balanceOf",
+    args: targetAddress ? [targetAddress] : undefined,
+    query: {
+      enabled: !!targetAddress,
+    },
+  })
+}
