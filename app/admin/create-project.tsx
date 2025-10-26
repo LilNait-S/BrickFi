@@ -443,7 +443,7 @@ export function CreateProject() {
 
               {/* Imagen del Proyecto */}
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="projectImage">
+                {/* <Label htmlFor="projectImage">
                   Imagen del Proyecto{" "}
                   <span className="text-destructive">*</span>
                 </Label>
@@ -456,10 +456,10 @@ export function CreateProject() {
                 <p className="text-xs text-muted-foreground">
                   Imagen que se subirá a IPFS/Filecoin (almacenamiento
                   descentralizado)
-                </p>
+                </p> */}
 
                 {/* Botón para subir imagen */}
-                {projectImageFile && !projectForm.imageCid && (
+                {/* {projectImageFile && !projectForm.imageCid && (
                   <Button
                     type="button"
                     onClick={handleUploadImage}
@@ -477,10 +477,10 @@ export function CreateProject() {
                       "Subir imagen a IPFS/Filecoin"
                     )}
                   </Button>
-                )}
+                )} */}
 
                 {/* Mostrar CID si existe */}
-                {projectForm.imageCid && (
+                {/* {projectForm.imageCid && (
                   <Alert className="mt-2 bg-green-500/10 border-green-500/20">
                     <Shield className="h-4 w-4 text-green-500" />
                     <AlertDescription className="text-green-500">
@@ -506,7 +506,7 @@ export function CreateProject() {
                       </p>
                     </AlertDescription>
                   </Alert>
-                )}
+                )} */}
               </div>
 
               {/* URL */}
