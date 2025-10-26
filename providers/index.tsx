@@ -2,10 +2,7 @@
 
 import "@rainbow-me/rainbowkit/styles.css"
 import { config, sonicTestnet } from "@/wagmi-config"
-import {
-  darkTheme,
-  RainbowKitProvider,
-} from "@rainbow-me/rainbowkit"
+import { darkTheme, RainbowKitProvider } from "@rainbow-me/rainbowkit"
 import { QueryClientProvider, QueryClient } from "@tanstack/react-query"
 import { WagmiProvider } from "wagmi"
 import { Toaster } from "@/components/ui/sonner"
@@ -38,7 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               initialChain={sonicTestnet.id}
             >
               {children}
-              <Toaster richColors theme="light" closeButton />
+              <Toaster richColors theme="dark" closeButton />
             </RainbowKitProvider>
           </RainbowKitSiweNextAuthProvider>
         </QueryClientProvider>
