@@ -159,6 +159,7 @@ export function useMintUSDC({
   const simulateMint = useSimulateContract({
     ...USDCConfig,
     functionName: "mint",
+    args: [BigInt(1)],
   })
 
   // -----------------------------
