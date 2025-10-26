@@ -66,7 +66,7 @@ export const dataMock = [
   {
     id: 9,
     images: [
-      "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=800&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=800&h=600&fit=crop",
       "https://images.unsplash.com/photo-1571055107559-3e67626fa8be?w=400&h=300&fit=crop",
       "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=400&h=300&fit=crop",
     ],
@@ -74,7 +74,7 @@ export const dataMock = [
   {
     id: 10,
     images: [
-      "https://images.unsplash.com/photo-1597047084033-d99568cf6067?w=800&h=600&fit=crop",
+      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop",
       "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?w=400&h=300&fit=crop",
       "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=400&h=300&fit=crop",
     ],
