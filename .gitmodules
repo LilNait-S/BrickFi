@@ -1,0 +1,3 @@
+[submodule "smart-contracts"]
+	path = smart-contracts
+	url = https://github.com/Mango-Eth/Eth-Lima-Tokenizer.git
