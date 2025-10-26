@@ -64,10 +64,6 @@ export default function DashboardPage() {
     toast.success(`¡Retorno reclamado exitosamente del proyecto!`)
   }
 
-  const handleClaimNFT = () => {
-    toast.success(`¡NFT de participación reclamado! Verifica en tu wallet.`)
-  }
-
   if (!isConnected) {
     return (
       <div className="container py-12 min-h-screen flex items-center justify-center mx-auto">
@@ -319,16 +315,6 @@ export default function DashboardPage() {
                         {investment.canClaim
                           ? "Reclamar Retorno"
                           : "Retorno no disponible"}
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        disabled={investment.nftClaimed || !investment.canClaim}
-                        onClick={handleClaimNFT}
-                      >
-                        {investment.nftClaimed
-                          ? "NFT Reclamado"
-                          : "Reclamar NFT"}
                       </Button>
                     </div>
 
