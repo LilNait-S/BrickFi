@@ -2,14 +2,20 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Address } from "viem"
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { poolConfig } from "./config"
+import { poolSummaryConfig } from "./config"
 
 interface Options {
   onSuccess?: () => void
   onError?: (error: Error) => void
 }
 
-export function useInvestInProject({ options }: { options?: Options } = {}) {
+export function useInvestInProject({ 
+  contractAddress, 
+  options 
+}: { 
+  contractAddress: Address
+  options?: Options 
+}) {
   const queryClient = useQueryClient()
 
   // -----------------------------
@@ -26,7 +32,7 @@ export function useInvestInProject({ options }: { options?: Options } = {}) {
   // -----------------------------
   const investReceipt = useWaitForTransactionReceipt({
     hash: createHash,
-    chainId: poolConfig.chainId,
+    chainId: poolSummaryConfig.chainId,
   })
 
   // -----------------------------
@@ -35,6 +41,7 @@ export function useInvestInProject({ options }: { options?: Options } = {}) {
   useEffect(() => {
     if (investReceipt.isSuccess && createHash && investReceipt.data) {
       queryClient.invalidateQueries({ queryKey: ["readContract"] })
+      queryClient.invalidateQueries({ queryKey: ["readContracts"] })
       options?.onSuccess?.()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -61,7 +68,8 @@ export function useInvestInProject({ options }: { options?: Options } = {}) {
       setError(null)
 
       const hash = await writeContractAsync({
-        ...poolConfig,
+        ...poolSummaryConfig,
+        address: contractAddress,
         functionName: "buyShares",
         args: [amountToInvest],
       })
