@@ -10,6 +10,7 @@ export interface Project {
   softCapAmount: bigint // Monto mínimo a recaudar
   startTime: bigint // Tiempo de inicio de la venta
   buyingPeriodEnd: bigint // Tiempo en el que acaba la habilitacion de compra
+  
   maxRepaymentTime: bigint // El tiempo en el que se devolverá el dinero
   possibleReturn: number // uint16 retorna number, que representa el porcentaje de retorno
   url: string // La web del proyecto
@@ -18,6 +19,7 @@ export interface Project {
   totalReInvested: bigint // Monto a reinvertir en un futuro (la empresa)
   actualRepaymentTime: bigint // Tiempo, empieza a contar cuando está en la phase de espera (la empresa)
   currentPhase: number // Fase actual del proyecto (0-4)
+  
 }
 
 // Función para formatear el resultado
