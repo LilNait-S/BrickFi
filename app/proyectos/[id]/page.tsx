@@ -16,6 +16,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { dataMock } from "@/data/images"
 import {
+  useBot,
   useClaimAdmin,
   useFinalizeProjectDemo,
   useInvestInProject,
@@ -131,6 +132,18 @@ export default function ProjectDetail() {
       },
       onError: (error) => {
         toast.error(error.message || "Error al reclamar administrador")
+      },
+    },
+  })
+
+  const { execute: bot } = useBot({
+    contractAddress: params.id,
+    options: {
+      onSuccess: () => {
+        toast.success("¡Bot ejecutado exitosamente!")
+      },
+      onError: (error) => {
+        toast.error(error.message || "Error al ejecutar el bot")
       },
     },
   })
@@ -290,6 +303,7 @@ export default function ProjectDetail() {
           <div className="flex items-center gap-6">
             <Button onClick={mint}>Mintear USDC</Button>
             <span>{formatUnits(usdcBalance ?? BigInt(0), 18)}</span>
+            <Button onClick={bot}>Bot</Button>
             <Button onClick={finalize}>Adelantar tiempo</Button>
             <Button onClick={claimAdmin}>Reclamar fondos siendo Admin</Button>
             <Button onClick={regresarFondos}>

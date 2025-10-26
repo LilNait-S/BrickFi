@@ -310,6 +310,105 @@ export function useReembolso({
     execute,
   }
 }
+export function useBot({
+  contractAddress,
+  options,
+}: {
+  contractAddress: Address
+  options?: Options
+}) {
+  const queryClient = useQueryClient()
+
+  // -----------------------------
+  // 1) Write contract
+  // -----------------------------
+  const { writeContractAsync } = useWriteContract()
+
+  const [createHash, setCreateHash] = useState<Address | undefined>()
+  const [isPending, setIsPending] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+
+  // -----------------------------
+  // 2) Receipt
+  // -----------------------------
+  const finalizeReceipt = useWaitForTransactionReceipt({
+    hash: createHash,
+    chainId: poolSummaryConfig.chainId,
+  })
+
+  // -----------------------------
+  // 3) Efecto de éxito
+  // -----------------------------
+  useEffect(() => {
+    if (finalizeReceipt.isSuccess && createHash && finalizeReceipt.data) {
+      queryClient.invalidateQueries({ queryKey: ["readContract"] })
+      queryClient.invalidateQueries({ queryKey: ["readContracts"] })
+      options?.onSuccess?.()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalizeReceipt.isSuccess, createHash])
+
+  // -----------------------------
+  // 4) Efecto de error
+  // -----------------------------
+  useEffect(() => {
+    if (error) {
+      options?.onError?.(error)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [error])
+
+  // -----------------------------
+  // 5) Ejecutar finalización del proyecto (demo)
+  // -----------------------------
+  const execute = async () => {
+    if (isPending) return
+
+    try {
+      setIsPending(true)
+      setError(null)
+
+      const hash = await writeContractAsync({
+        ...poolSummaryConfig,
+        address: contractAddress,
+        functionName: "compoundL",
+      })
+
+      setCreateHash(hash)
+      return hash
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Error al finalizar el proyecto")
+      setError(error)
+      console.error("Error al finalizar el proyecto:", error)
+      throw error
+    } finally {
+      setIsPending(false)
+    }
+  }
+
+  // Estados combinados
+  const isLoading = isPending || finalizeReceipt.isLoading
+  const isSuccess = finalizeReceipt.isSuccess
+
+  return {
+    // estados
+    isLoading,
+    isPending,
+    isSuccess,
+
+    // datos
+    createHash,
+    projectReceipt: finalizeReceipt.data,
+
+    // errores
+    error,
+    projectReceiptError: finalizeReceipt.error,
+
+    // acción
+    execute,
+  }
+}
 
 export function useReclamarGanancias({
   contractAddress,
