@@ -12,6 +12,7 @@ import { Address } from "viem"
 
 interface ProjectCardProps {
   project: Project & { contractAddress: Address }
+  imageUrl?: string
 }
 
 const statusColors: Record<number, string> = {
@@ -34,7 +35,7 @@ function getPhaseLabel(phase: number): string {
   return labels[phase] || "Activo"
 }
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, imageUrl }: ProjectCardProps) {
   // Calcular tiempo restante hasta el final del período de compra
   const timeLeft = formatTime(Number(project.buyingPeriodEnd))
 
@@ -46,14 +47,22 @@ export function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Link href={`/proyectos/${project.contractAddress}`}>
       <Card className="overflow-hidden group hover:shadow-glow transition-all duration-300 p-0 gap-0">
-        {/* Imagen placeholder - puedes agregar IPFS image usando project.url o crear campo separado */}
-        <div className="relative h-48 overflow-hidden bg-linear-to-br from-primary/20 to-primary/5">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-muted-foreground">
-              <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Proyecto Inmobiliario</p>
+        {/* Imagen del proyecto */}
+        <div className="relative h-48 overflow-hidden">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={project.name}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <div className="bg-linear-to-br from-primary/20 to-primary/5 h-full flex items-center justify-center">
+              <div className="text-center text-muted-foreground">
+                <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Proyecto Inmobiliario</p>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <CardContent className="p-6 space-y-4">
