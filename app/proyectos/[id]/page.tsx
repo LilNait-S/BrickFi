@@ -27,6 +27,12 @@ import {
   AlertCircle,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useGetProject } from "@/services/pool/query"
+import { useMintUSDC, useApproveUSDC } from "@/services/usdc/mutate"
+import { useGetUSDCBalance } from "@/services/usdc/query"
+import { formatUnits, parseUnits } from "viem"
+import { useInvestInProject } from "@/services/pool/mutate"
+import { PoolConfig } from "@/services/pool/config"
 
 const statusLabels = {
   active: "Activo",
@@ -47,13 +53,42 @@ function calculateDaysLeft(deadline: number): number {
 }
 
 export default function ProjectDetail() {
+  const { project: projectData } = useGetProject()
+  const { execute: invest, isLoading: isInvesting } = useInvestInProject({
+    options: {
+      onSuccess: () => {
+        toast.success("¡Inversión exitosa!")
+        setInvestAmount("")
+      },
+      onError: (error) => {
+        toast.error(error.message || "Error al invertir")
+      },
+    },
+  })
+
+  const {
+    execute: approve,
+    isLoading: isApproving,
+    currentAllowance,
+  } = useApproveUSDC({
+    spender: PoolConfig.address,
+    options: {
+      onSuccess: () => {
+        toast.success("Aprobación exitosa")
+      },
+    },
+  })
+
+  console.log("projectDat:", projectData)
   const params = useParams()
   const id = params?.id as string
   const [investAmount, setInvestAmount] = useState("")
-  const [isInvesting, setIsInvesting] = useState(false)
   const [selectedImage, setSelectedImage] = useState(0)
 
   const project = mockProjects.find((p) => p.id === id)
+
+  const { execute: mint } = useMintUSDC()
+  const { data: usdcBalance } = useGetUSDCBalance()
 
   if (!project) {
     return (
@@ -81,19 +116,26 @@ export default function ProjectDetail() {
       return
     }
 
-    if (amount < project.minInvestment) {
-      toast.error(`La inversión mínima es $${project.minInvestment} USDT`)
+    if (amount < 100) {
+      toast.error("La inversión mínima es $100 USDT")
       return
     }
 
-    setIsInvesting(true)
+    try {
+      // Convertir el monto a formato con 18 decimales (USDC standard)
+      const amountToInvest = parseUnits(investAmount, 18)
 
-    // Simulate investment transaction
-    setTimeout(() => {
-      toast.success(`¡Inversión de $${amount.toLocaleString()} USDT exitosa!`)
-      setInvestAmount("")
-      setIsInvesting(false)
-    }, 2000)
+      // Verificar si necesitamos aprobar
+      if (!currentAllowance || currentAllowance < amountToInvest) {
+        toast.info("Aprobando USDC para invertir...")
+        await approve()
+      }
+
+      // Invertir
+      await invest({ amountToInvest })
+    } catch (error) {
+      console.error("Error al invertir:", error)
+    }
   }
 
   const daysRemaining = calculateDaysLeft(project.deadline)
@@ -110,10 +152,13 @@ export default function ProjectDetail() {
           </Link>
         </Button>
 
+        <Button onClick={mint}>Mintear USDC</Button>
+        <span>{formatUnits(usdcBalance ?? BigInt(0), 18)}</span>
+
         {/* Hero Section */}
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Images */}
-          <div >
+          <div>
             {/* Main Image */}
             <div className="relative h-96 overflow-hidden rounded-2xl">
               <img
@@ -276,16 +321,16 @@ export default function ProjectDetail() {
                       </label>
                       <Input
                         type="number"
-                        placeholder={`Mínimo: ${project.minInvestment}`}
+                        placeholder="Mínimo: 100"
                         value={investAmount}
                         onChange={(e) => setInvestAmount(e.target.value)}
-                        min={project.minInvestment}
+                        min={100}
                         step="100"
                       />
                       <p className="text-xs text-muted-foreground">
                         Disponible para invertir: $
                         {availableToInvest.toLocaleString()} USDT • Inversión
-                        mínima: ${project.minInvestment.toLocaleString()} USDT
+                        mínima: $100 USDT
                       </p>
                     </div>
 
@@ -293,9 +338,13 @@ export default function ProjectDetail() {
                       className="w-full"
                       size="lg"
                       onClick={handleInvest}
-                      disabled={isInvesting || !investAmount}
+                      disabled={isInvesting || isApproving || !investAmount}
                     >
-                      {isInvesting ? "Procesando..." : "Invertir Ahora"}
+                      {isApproving
+                        ? "Aprobando USDC..."
+                        : isInvesting
+                          ? "Procesando inversión..."
+                          : "Invertir Ahora"}
                     </Button>
 
                     <div className="text-xs text-muted-foreground space-y-1 pt-2">
