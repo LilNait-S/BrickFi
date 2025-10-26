@@ -7,41 +7,41 @@ export function formatTime(timestamp: number): string {
   // Convertir timestamp de segundos a milisegundos para JavaScript Date
   const date = new Date(timestamp * 1000)
   const now = new Date()
-  
+
   // Calcular diferencia en milisegundos
   const diffMs = date.getTime() - now.getTime()
-  
+
   // Si es tiempo pasado, mostrar "Expirado"
   if (diffMs <= 0) {
     return "Expirado"
   }
-  
+
   // Convertir a minutos, horas y días
   const totalMinutes = Math.floor(diffMs / (1000 * 60))
   const totalHours = Math.floor(totalMinutes / 60)
   const totalDays = Math.floor(totalHours / 24)
-  
+
   // Calcular componentes restantes
   const days = totalDays
   const hours = totalHours % 24
   const minutes = totalMinutes % 60
-  
+
   // Construir string de resultado
   const parts: string[] = []
-  
+
   if (days > 0) {
     parts.push(`${days}d`)
   }
-  
+
   if (hours > 0) {
     parts.push(`${hours}h`)
   }
-  
+
   if (minutes > 0 || parts.length === 0) {
     parts.push(`${minutes}m`)
   }
-  
-  return parts.join(' ')
+
+  return parts.join(" ")
 }
 
 /**
@@ -51,11 +51,11 @@ export function formatTime(timestamp: number): string {
  */
 export function formatDate(timestamp: number): string {
   const date = new Date(timestamp * 1000)
-  
-  return date.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
+
+  return date.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
   })
 }
 
@@ -66,12 +66,12 @@ export function formatDate(timestamp: number): string {
  */
 export function formatDateTime(timestamp: number): string {
   const date = new Date(timestamp * 1000)
-  
-  return date.toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+
+  return date.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   })
 }
