@@ -29,11 +29,11 @@ import {
 import { toast } from "sonner"
 import { useGetProject } from "@/services/pool/query"
 import { useMintUSDC, useApproveUSDC } from "@/services/usdc/mutate"
-import { useGetUSDCBalance } from "@/services/usdc/query"
+import { useGetUSDCBalance, useGetUSDCAllowance } from "@/services/usdc/query"
 import { Address, formatUnits, parseUnits } from "viem"
 import { useInvestInProject } from "@/services/pool/mutate"
-import { poolConfig } from "@/services/pool/config"
 import { useParams } from "next/navigation"
+import { useAccount } from "wagmi"
 import { formatTime, formatDate } from "@/utils/get-time"
 import { PUBLIC_PHASE_LABELS } from "@/services/pool/query"
 
@@ -48,8 +48,11 @@ function getImageMockFromAddress(address: Address): (typeof dataMock)[0] {
 
 export default function ProjectDetail() {
   const params = useParams<{ id: Address }>()
+  const { address: userAddress } = useAccount()
   const { project: projectData } = useGetProject(params.id)
+
   const { execute: invest, isLoading: isInvesting } = useInvestInProject({
+    contractAddress: params.id,
     options: {
       onSuccess: () => {
         toast.success("¡Inversión exitosa!")
@@ -61,12 +64,8 @@ export default function ProjectDetail() {
     },
   })
 
-  const {
-    execute: approve,
-    isLoading: isApproving,
-    currentAllowance,
-  } = useApproveUSDC({
-    spender: poolConfig.address,
+  const { execute: approve, isLoading: isApproving } = useApproveUSDC({
+    spender: params.id, // Usar el address del contrato del proyecto
     options: {
       onSuccess: () => {
         toast.success("Aprobación exitosa")
@@ -74,7 +73,11 @@ export default function ProjectDetail() {
     },
   })
 
-  console.log("projectData:", projectData)
+  // Hook para obtener el allowance actual en tiempo real
+  const { data: currentAllowance } = useGetUSDCAllowance({
+    ownerAddress: userAddress,
+    spenderAddress: params.id,
+  })
 
   const [investAmount, setInvestAmount] = useState("")
   const [selectedImage, setSelectedImage] = useState(0)
@@ -106,35 +109,6 @@ export default function ProjectDetail() {
   const imageMock = getImageMockFromAddress(params.id)
   const projectImages = imageMock.images
 
-  const handleInvest = async () => {
-    const amount = parseFloat(investAmount)
-    if (isNaN(amount) || amount <= 0) {
-      toast.error("Ingresa un monto válido")
-      return
-    }
-
-    if (amount < 100) {
-      toast.error("La inversión mínima es $100 USDT")
-      return
-    }
-
-    try {
-      // Convertir el monto a formato con 18 decimales (USDC standard)
-      const amountToInvest = parseUnits(investAmount, 18)
-
-      // Verificar si necesitamos aprobar
-      if (!currentAllowance || currentAllowance < amountToInvest) {
-        toast.info("Aprobando USDC para invertir...")
-        await approve()
-      }
-
-      // Invertir
-      await invest({ amountToInvest })
-    } catch (error) {
-      console.error("Error al invertir:", error)
-    }
-  }
-
   // Calcular tiempo restante usando buyingPeriodEnd del blockchain
   const timeRemaining = formatTime(Number(projectData.buyingPeriodEnd))
 
@@ -162,6 +136,28 @@ export default function ProjectDetail() {
   }
 
   const roiData = calculateROI()
+
+  // Función helper para verificar si necesita aprobación
+  const needsApproval = (amount: string): boolean => {
+    if (!amount || !currentAllowance) return true
+    try {
+      const amountBigInt = parseUnits(amount, 18)
+      return currentAllowance < amountBigInt
+    } catch {
+      return true
+    }
+  }
+
+  // Función helper para verificar si puede invertir
+  const canInvest = (amount: string): boolean => {
+    if (!amount || !currentAllowance || !userAddress) return false
+    try {
+      const amountBigInt = parseUnits(amount, 18)
+      return currentAllowance >= amountBigInt
+    } catch {
+      return false
+    }
+  }
 
   return (
     <div className="min-h-screen py-12">
@@ -223,7 +219,6 @@ export default function ProjectDetail() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h1 className="text-4xl font-bold">{projectData.name}</h1>
-               
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
@@ -367,7 +362,7 @@ export default function ProjectDetail() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium">
-                        Monto a invertir (USDT)
+                        Monto a invertir (USDC)
                       </label>
                       <Input
                         type="number"
@@ -377,25 +372,93 @@ export default function ProjectDetail() {
                         min={100}
                         step="100"
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Disponible para invertir: $
-                        {availableToInvest.toLocaleString()} USDC • Inversión
-                        mínima: $100 USDC
-                      </p>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Disponible para invertir: $
+                          {availableToInvest.toLocaleString()} USDC • Inversión
+                          mínima: $100 USDC
+                        </p>
+                      </div>
                     </div>
 
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={handleInvest}
-                      disabled={isInvesting || isApproving || !investAmount}
-                    >
-                      {isApproving
-                        ? "Aprobando USDC..."
-                        : isInvesting
-                        ? "Procesando inversión..."
-                        : "Invertir Ahora"}
-                    </Button>
+                    <div className="space-y-3">
+                      {/* Botón de Aprobación - Solo aparece si necesita aprobación */}
+                      {needsApproval(investAmount) && investAmount && (
+                        <Button
+                          className="w-full"
+                          size="lg"
+                          onClick={async () => {
+                            if (!investAmount) {
+                              toast.error("Ingresa un monto válido primero")
+                              return
+                            }
+                            await approve()
+                          }}
+                          disabled={
+                            isApproving || !investAmount || !userAddress
+                          }
+                          variant="outline"
+                        >
+                          {isApproving
+                            ? "Aprobando USDC..."
+                            : "1. Aprobar USDC"}
+                        </Button>
+                      )}
+
+                      {/* Botón de Inversión */}
+                      <Button
+                        className="w-full"
+                        size="lg"
+                        onClick={async () => {
+                          const amount = parseFloat(investAmount)
+                          if (isNaN(amount) || amount <= 0) {
+                            toast.error("Ingresa un monto válido")
+                            return
+                          }
+
+                          if (amount < 100) {
+                            toast.error("La inversión mínima es $100 USDC")
+                            return
+                          }
+
+                          // Verificar conexión de wallet
+                          if (!userAddress) {
+                            toast.error("Conecta tu wallet primero")
+                            return
+                          }
+
+                          const amountToInvest = parseUnits(investAmount, 18)
+
+                          // Verificar aprobación antes de invertir
+                          if (needsApproval(investAmount)) {
+                            toast.error(
+                              "Primero debes aprobar el monto de USDC"
+                            )
+                            return
+                          }
+
+                          try {
+                            await invest({ amountToInvest })
+                          } catch (error) {
+                            console.error("Error al invertir:", error)
+                          }
+                        }}
+                        disabled={
+                          isInvesting ||
+                          !investAmount ||
+                          !userAddress ||
+                          needsApproval(investAmount)
+                        }
+                      >
+                        {isInvesting
+                          ? "Procesando inversión..."
+                          : canInvest(investAmount)
+                          ? "2. Invertir Ahora"
+                          : !userAddress
+                          ? "Conectar Wallet"
+                          : "Invertir (Aprobar primero)"}
+                      </Button>
+                    </div>
 
                     <div className="text-xs text-muted-foreground space-y-1 pt-2">
                       <p>
