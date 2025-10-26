@@ -2,83 +2,83 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import { Project } from "@/data/mockProjects"
-import { Clock, MapPin, TrendingUp } from "lucide-react"
+import { Clock, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { ProgressBar } from "./progress-bar"
+import { Project } from "@/services/pool/query"
+import { formatTime } from "@/utils/get-time"
+import { formatUnits } from "viem"
+import { Address } from "viem"
 
 interface ProjectCardProps {
-  project: Project
+  project: Project & { contractAddress: Address }
 }
 
-const statusLabels = {
-  active: "Activo",
-  funded: "Financiado",
-  construction: "En Construcción",
-  completed: "Completado",
-  payout: "Pagando",
+const statusColors: Record<number, string> = {
+  0: "bg-green-500/10 text-green-500 border-green-500/20", // Activo
+  1: "bg-blue-500/10 text-blue-500 border-blue-500/20", // Financiado
+  2: "bg-orange-500/10 text-orange-500 border-orange-500/20", // En Construcción
+  3: "bg-purple-500/10 text-purple-500 border-purple-500/20", // Completado
+  4: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20", // Reembolso
 }
 
-const typeLabels = {
-  residential: "Residencial",
-  commercial: "Comercial",
-  mixed: "Mixto",
-}
-
-const statusColors = {
-  active: "bg-green-500/10 text-green-500 border-green-500/20",
-  funded: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-  construction: "bg-orange-500/10 text-orange-500 border-orange-500/20",
-  completed: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-  payout: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-}
-
-function calculateDaysLeft(deadline: number): number {
-  return Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60 * 24)))
+// Helper function para obtener el label de fase de forma segura
+function getPhaseLabel(phase: number): string {
+  const labels: Record<number, string> = {
+    0: "Activo",
+    1: "Financiado",
+    2: "En Construcción",
+    3: "Completado",
+    4: "Reembolso",
+  }
+  return labels[phase] || "Activo"
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
-  const daysLeft = calculateDaysLeft(project.deadline)
+  // Calcular tiempo restante hasta el final del período de compra
+  const timeLeft = formatTime(Number(project.buyingPeriodEnd))
+
+  // Formatear montos para mostrar (USDC tiene 18 decimales)
+  const softCapUSD = formatUnits(project.softCapAmount, 18)
+  const totalSoldUSD = formatUnits(project.totalSold, 18)
+  const goalUSD = formatUnits(project.totalFractions, 18)
 
   return (
-    <Link href={`/proyectos/${project.id}`}>
+    <Link href={`/proyectos/${project.contractAddress}`}>
       <Card className="overflow-hidden group hover:shadow-glow transition-all duration-300 p-0 gap-0">
-        <div className="relative h-48 overflow-hidden">
-          <img
-            src={project.images[0]}
-            alt={project.name}
-            className="object-cover group-hover:scale-110 transition-transform duration-300"
-          />
+        {/* Imagen placeholder - puedes agregar IPFS image usando project.url o crear campo separado */}
+        <div className="relative h-48 overflow-hidden bg-linear-to-br from-primary/20 to-primary/5">
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center text-muted-foreground">
+              <TrendingUp className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Proyecto Inmobiliario</p>
+            </div>
+          </div>
         </div>
 
         <CardContent className="p-6 space-y-4">
           <div>
-            <h3 className="text-xl font-bold mb-4">{project.name}</h3>
+            <h3 className="text-xl font-bold mb-2 line-clamp-2">
+              {project.name}
+            </h3>
             <div className="flex justify-between items-center">
-              <div className="flex items-center text-muted-foreground text-sm">
-                <MapPin className="w-4 h-4 mr-1" />
-                {project.location}
-              </div>
-              <div className="flex gap-4">
-                <Badge
-                  variant="outline"
-                  className="bg-background/80 backdrop-blur-sm"
-                >
-                  {typeLabels[project.type]}
-                </Badge>
-                <Badge
-                  variant="outline"
-                  className={`${
-                    statusColors[project.status]
-                  } backdrop-blur-sm border`}
-                >
-                  {statusLabels[project.status]}
-                </Badge>
-              </div>
+              <Badge
+                variant="outline"
+                className={`${
+                  statusColors[project.currentPhase] || statusColors[0]
+                } backdrop-blur-sm border`}
+              >
+                {getPhaseLabel(project.currentPhase)}
+              </Badge>
             </div>
           </div>
 
-          <ProgressBar current={project.totalRaised} target={project.softCap} />
+          {/* Progress bar usando datos reales */}
+          <ProgressBar
+            current={Number(totalSoldUSD)}
+            softCap={Number(softCapUSD)}
+            target={Number(goalUSD)}
+          />
 
           <div className="grid grid-cols-2 gap-4 pt-2">
             <div className="flex items-center gap-2">
@@ -86,9 +86,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 <TrendingUp className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">ROI Anual</p>
+                <p className="text-xs text-muted-foreground">Retorno</p>
                 <p className="text-sm font-semibold text-primary">
-                  {project.roi}%
+                  {project.possibleReturn}%
                 </p>
               </div>
             </div>
@@ -99,9 +99,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Tiempo</p>
-                <p className="text-sm font-semibold">
-                  {daysLeft > 0 ? `${daysLeft} días` : "Cerrado"}
-                </p>
+                <p className="text-sm font-semibold">{timeLeft}</p>
               </div>
             </div>
           </div>
