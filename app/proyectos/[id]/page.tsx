@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-
-import Link from "next/link"
-import { dataMock } from "@/data/images"
+import { ProgressBar } from "@/components/progress-bar"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -13,29 +13,29 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { ProgressBar } from "@/components/progress-bar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import {
-  MapPin,
-  Calendar,
-  TrendingUp,
-  FileText,
-  ArrowLeft,
-  AlertCircle,
-} from "lucide-react"
-import { toast } from "sonner"
-import { useGetProject } from "@/services/pool/query"
-import { useMintUSDC, useApproveUSDC } from "@/services/usdc/mutate"
-import { useGetUSDCBalance, useGetUSDCAllowance } from "@/services/usdc/query"
-import { Address, formatUnits, parseUnits } from "viem"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { dataMock } from "@/data/images"
 import { useInvestInProject } from "@/services/pool/mutate"
+import { PUBLIC_PHASE_LABELS, useGetProject } from "@/services/pool/query"
+import { useApproveUSDC, useMintUSDC } from "@/services/usdc/mutate"
+import { useGetUSDCAllowance, useGetUSDCBalance } from "@/services/usdc/query"
+import { formatDate, formatTime } from "@/utils/get-time"
+import {
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  FileText,
+  MapPin,
+  TrendingUp,
+} from "lucide-react"
+import Link from "next/link"
 import { useParams } from "next/navigation"
+import { toast } from "sonner"
+import { Address, formatUnits, parseUnits } from "viem"
 import { useAccount } from "wagmi"
-import { formatTime, formatDate } from "@/utils/get-time"
-import { PUBLIC_PHASE_LABELS } from "@/services/pool/query"
+import { ProjectDetailSkeleton } from "./skeleton"
+import { ProjectDetailError } from "./error-proyecto"
 
 // Función para mapear un address del contrato a un ID consistente del mock de imágenes
 function getImageMockFromAddress(address: Address): (typeof dataMock)[0] {
@@ -49,7 +49,13 @@ function getImageMockFromAddress(address: Address): (typeof dataMock)[0] {
 export default function ProjectDetail() {
   const params = useParams<{ id: Address }>()
   const { address: userAddress } = useAccount()
-  const { project: projectData } = useGetProject(params.id)
+  const {
+    project: projectData,
+    isLoading: isLoadingProject,
+    error: projectError,
+  } = useGetProject(params.id)
+
+  console.log("projectData:", projectData)
 
   const { execute: invest, isLoading: isInvesting } = useInvestInProject({
     contractAddress: params.id,
@@ -85,14 +91,30 @@ export default function ProjectDetail() {
   const { execute: mint } = useMintUSDC()
   const { data: usdcBalance } = useGetUSDCBalance()
 
-  // Si no hay datos del proyecto, mostrar loading o error
+  // Mostrar skeleton mientras carga
+  if (isLoadingProject) {
+    return <ProjectDetailSkeleton />
+  }
+
+  // // Mostrar error si hay un error
+  // if (projectError) {
+  //   return (
+  //     <ProjectDetailError
+  //       error={projectError}
+  //       onRetry={() => window.location.reload()}
+  //     />
+  //   )
+  // }
+
+  // Si no hay datos del proyecto después de cargar
   if (!projectData) {
     return (
       <div className="container py-12 min-h-screen mx-auto">
         <div className="text-center space-y-6">
-          <h1 className="text-3xl font-bold">Cargando proyecto...</h1>
+          <AlertCircle className="w-16 h-16 text-muted-foreground mx-auto" />
+          <h1 className="text-3xl font-bold">Proyecto no encontrado</h1>
           <p className="text-muted-foreground">
-            Obteniendo datos del blockchain
+            No se encontró información para este proyecto
           </p>
           <Button asChild>
             <Link href="/proyectos">
@@ -467,9 +489,6 @@ export default function ProjectDetail() {
                       <p>
                         • Los tokens te permitirán reclamar tu ROI al finalizar
                       </p>
-                      <p>
-                        • También recibirás un NFT de participación (soulbound)
-                      </p>
                     </div>
                   </>
                 )}
@@ -528,36 +547,12 @@ export default function ProjectDetail() {
 
                   <div className="space-y-4">
                     <h4 className="font-semibold text-lg">
-                      Métricas de Tiempo
+                      Cronograma de Venta
                     </h4>
                     <div className="space-y-3">
                       <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
                         <span className="text-muted-foreground">
-                          Duración del Proyecto:
-                        </span>
-                        <span className="font-bold">
-                          {Math.ceil(
-                            roiData.timeToMaturity / (60 * 60 * 24 * 30)
-                          )}{" "}
-                          meses
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                        <span className="text-muted-foreground">
-                          ROI Anualizado:
-                        </span>
-                        <span className="font-bold text-primary">
-                          {(
-                            roiData.roiPercentage /
-                              (roiData.timeToMaturity / (60 * 60 * 24 * 365)) ||
-                            0
-                          ).toFixed(2)}
-                          %
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                        <span className="text-muted-foreground">
-                          Inicio de Inversiones:
+                          Inicio de Venta:
                         </span>
                         <span className="font-bold">
                           {formatDate(Number(projectData.startTime))}
@@ -565,10 +560,50 @@ export default function ProjectDetail() {
                       </div>
                       <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
                         <span className="text-muted-foreground">
-                          Fecha de Retorno:
+                          Fin Período de Compra:
                         </span>
                         <span className="font-bold">
-                          {formatDate(Number(projectData.maxRepaymentTime))}
+                          {formatDate(Number(projectData.buyingPeriodEnd))}
+                        </span>
+                      </div>
+                      {/* <div className="flex justify-between items-center p-3 rounded-lg bg-orange-50 border border-orange-200">
+                        <span className="text-orange-700">
+                          Plazo Máximo Devolución:
+                        </span>
+                        <span className="font-bold text-orange-700">
+                          {Math.ceil(Number(projectData.maxRepaymentTime) / (60 * 60 * 24))} días máx.
+                        </span>
+                      </div> */}
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">
+                          Duración del Proyecto:
+                        </span>
+                        <span className="font-bold text-primary">
+                          {(() => {
+                            const totalDays = Math.ceil(
+                              (Number(projectData.maxRepaymentTime) -
+                                Number(projectData.buyingPeriodEnd)) /
+                                (60 * 60 * 24)
+                            )
+                            const months = Math.floor(totalDays / 30)
+                            const remainingDays = totalDays % 30
+
+                            if (months > 0 && remainingDays > 0) {
+                              return `${months} ${
+                                months === 1 ? "mes" : "meses"
+                              } y ${remainingDays} ${
+                                remainingDays === 1 ? "día" : "días"
+                              }`
+                            } else if (months > 0) {
+                              return `${months} ${
+                                months === 1 ? "mes" : "meses"
+                              }`
+                            } else {
+                              return `${totalDays} ${
+                                totalDays === 1 ? "día" : "días"
+                              }`
+                            }
+                          })()}
                         </span>
                       </div>
                     </div>
