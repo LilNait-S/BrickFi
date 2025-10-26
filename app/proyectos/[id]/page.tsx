@@ -1,9 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useParams } from "next/navigation"
+
 import Link from "next/link"
-import { mockProjects } from "@/data/mockProjects"
+import { dataMock } from "@/data/images"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -30,30 +30,25 @@ import { toast } from "sonner"
 import { useGetProject } from "@/services/pool/query"
 import { useMintUSDC, useApproveUSDC } from "@/services/usdc/mutate"
 import { useGetUSDCBalance } from "@/services/usdc/query"
-import { formatUnits, parseUnits } from "viem"
+import { Address, formatUnits, parseUnits } from "viem"
 import { useInvestInProject } from "@/services/pool/mutate"
-import { PoolConfig } from "@/services/pool/config"
+import { poolConfig } from "@/services/pool/config"
+import { useParams } from "next/navigation"
+import { formatTime, formatDate } from "@/utils/get-time"
+import { PUBLIC_PHASE_LABELS } from "@/services/pool/query"
 
-const statusLabels = {
-  active: "Activo",
-  funded: "Financiado",
-  construction: "En Construcción",
-  completed: "Completado",
-  payout: "Pagando",
-}
-
-const typeLabels = {
-  residential: "Residencial",
-  commercial: "Comercial",
-  mixed: "Mixto",
-}
-
-function calculateDaysLeft(deadline: number): number {
-  return Math.max(0, Math.ceil((deadline - Date.now()) / (1000 * 60 * 60 * 24)))
+// Función para mapear un address del contrato a un ID consistente del mock de imágenes
+function getImageMockFromAddress(address: Address): (typeof dataMock)[0] {
+  // Convertir el hex del address a un número y usar módulo para seleccionar del array
+  const hex = address.toLowerCase().replace("0x", "")
+  const numericValue = parseInt(hex.slice(-8), 16) // Usar los últimos 8 caracteres del hex
+  const mockIndex = numericValue % dataMock.length
+  return dataMock[mockIndex]
 }
 
 export default function ProjectDetail() {
-  const { project: projectData } = useGetProject()
+  const params = useParams<{ id: Address }>()
+  const { project: projectData } = useGetProject(params.id)
   const { execute: invest, isLoading: isInvesting } = useInvestInProject({
     options: {
       onSuccess: () => {
@@ -71,7 +66,7 @@ export default function ProjectDetail() {
     isLoading: isApproving,
     currentAllowance,
   } = useApproveUSDC({
-    spender: PoolConfig.address,
+    spender: poolConfig.address,
     options: {
       onSuccess: () => {
         toast.success("Aprobación exitosa")
@@ -79,24 +74,22 @@ export default function ProjectDetail() {
     },
   })
 
-  console.log("projectDat:", projectData)
-  const params = useParams()
-  const id = params?.id as string
+  console.log("projectData:", projectData)
+
   const [investAmount, setInvestAmount] = useState("")
   const [selectedImage, setSelectedImage] = useState(0)
-
-  const project = mockProjects.find((p) => p.id === id)
 
   const { execute: mint } = useMintUSDC()
   const { data: usdcBalance } = useGetUSDCBalance()
 
-  if (!project) {
+  // Si no hay datos del proyecto, mostrar loading o error
+  if (!projectData) {
     return (
-      <div className="container py-12 min-h-screen">
+      <div className="container py-12 min-h-screen mx-auto">
         <div className="text-center space-y-6">
-          <h1 className="text-3xl font-bold">Proyecto no encontrado</h1>
+          <h1 className="text-3xl font-bold">Cargando proyecto...</h1>
           <p className="text-muted-foreground">
-            El proyecto que buscas no existe o ha sido eliminado
+            Obteniendo datos del blockchain
           </p>
           <Button asChild>
             <Link href="/proyectos">
@@ -108,6 +101,10 @@ export default function ProjectDetail() {
       </div>
     )
   }
+
+  // Obtener las imágenes mock basadas en el address del contrato
+  const imageMock = getImageMockFromAddress(params.id)
+  const projectImages = imageMock.images
 
   const handleInvest = async () => {
     const amount = parseFloat(investAmount)
@@ -138,22 +135,50 @@ export default function ProjectDetail() {
     }
   }
 
-  const daysRemaining = calculateDaysLeft(project.deadline)
-  const availableToInvest = project.softCap - project.totalRaised
+  // Calcular tiempo restante usando buyingPeriodEnd del blockchain
+  const timeRemaining = formatTime(Number(projectData.buyingPeriodEnd))
+
+  // Calcular cuánto falta para alcanzar el softcap
+  const totalSoldUSDC = Number(formatUnits(projectData.totalSold, 18))
+  const softCapUSDC = Number(formatUnits(projectData.softCapAmount, 18))
+  const totalFractionsUSDC = Number(formatUnits(projectData.totalFractions, 18))
+  const availableToInvest = Math.max(0, softCapUSDC - totalSoldUSDC)
+
+  // Cálculos de ROI más detallados
+  const calculateROI = () => {
+    const possibleReturnRate = projectData.possibleReturn / 100 // Convertir % a decimal
+    const expectedReturn = totalFractionsUSDC * (1 + possibleReturnRate)
+    const netProfit = expectedReturn - totalFractionsUSDC
+    const roiPercentage = (netProfit / totalFractionsUSDC) * 100
+
+    return {
+      investmentAmount: totalFractionsUSDC,
+      expectedReturn: expectedReturn,
+      netProfit: netProfit,
+      roiPercentage: roiPercentage,
+      timeToMaturity:
+        Number(projectData.maxRepaymentTime) - Number(projectData.startTime),
+    }
+  }
+
+  const roiData = calculateROI()
 
   return (
     <div className="min-h-screen py-12">
       <div className="container space-y-8 mx-auto">
         {/* Back Button */}
-        <Button variant="ghost" asChild>
-          <Link href="/proyectos">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver a Proyectos
-          </Link>
-        </Button>
-
-        <Button onClick={mint}>Mintear USDC</Button>
-        <span>{formatUnits(usdcBalance ?? BigInt(0), 18)}</span>
+        <div className="flex justify-between items-center">
+          <Button variant="ghost" asChild>
+            <Link href="/proyectos">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Volver a Proyectos
+            </Link>
+          </Button>
+          <div className="flex items-center gap-6">
+            <Button onClick={mint}>Mintear USDC</Button>
+            <span>{formatUnits(usdcBalance ?? BigInt(0), 18)}</span>
+          </div>
+        </div>
 
         {/* Hero Section */}
         <div className="grid lg:grid-cols-2 gap-8">
@@ -162,8 +187,8 @@ export default function ProjectDetail() {
             {/* Main Image */}
             <div className="relative h-96 overflow-hidden rounded-2xl">
               <img
-                src={project.images[selectedImage]}
-                alt={project.name}
+                src={projectImages[selectedImage]}
+                alt={projectData.name}
                 className="h-full w-full object-cover"
               />
             </div>
@@ -171,7 +196,7 @@ export default function ProjectDetail() {
             {/* Thumbnails Gallery with Scroll */}
             <ScrollArea className="w-full">
               <div className="flex gap-4 py-4 px-1">
-                {project.images.map((img, idx) => (
+                {projectImages.map((img: string, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(idx)}
@@ -183,7 +208,7 @@ export default function ProjectDetail() {
                   >
                     <img
                       src={img}
-                      alt={`${project.name} - imagen ${idx + 1}`}
+                      alt={`${projectData.name} - imagen ${idx + 1}`}
                       className="h-full w-full object-cover"
                     />
                   </button>
@@ -197,17 +222,29 @@ export default function ProjectDetail() {
           <div className="space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h1 className="text-4xl font-bold">{project.name}</h1>
-                <Badge>{typeLabels[project.type]}</Badge>
+                <h1 className="text-4xl font-bold">{projectData.name}</h1>
+               
               </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                <span>{project.location}</span>
+                <span>Lima, Perú</span>
+              </div>
+              <div className="flex items-center gap-2 text-muted-foreground mt-2">
+                <FileText className="h-4 w-4" />
+                <a
+                  href={projectData.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Ver detalles del proyecto
+                </a>
               </div>
             </div>
 
             <p className="text-lg text-muted-foreground leading-relaxed">
-              {project.description}
+              Proyecto de tokenización inmobiliaria. Invierte y obtén
+              rendimientos cuando el proyecto se complete.
             </p>
 
             <div className="grid grid-cols-3 gap-4">
@@ -217,7 +254,10 @@ export default function ProjectDetail() {
                     ROI Estimado
                   </p>
                   <p className="text-3xl font-bold text-primary">
-                    {project.roi}x
+                    {roiData.roiPercentage.toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    ${roiData.netProfit.toLocaleString()} ganancia
                   </p>
                 </CardContent>
               </Card>
@@ -227,9 +267,7 @@ export default function ProjectDetail() {
                   <p className="text-sm text-muted-foreground mb-1">
                     Tiempo Restante
                   </p>
-                  <p className="text-3xl font-bold">
-                    {daysRemaining > 0 ? `${daysRemaining}d` : "Cerrado"}
-                  </p>
+                  <p className="text-3xl font-bold">{timeRemaining}</p>
                 </CardContent>
               </Card>
 
@@ -237,7 +275,11 @@ export default function ProjectDetail() {
                 <CardContent>
                   <p className="text-sm text-muted-foreground mb-1">Estado</p>
                   <Badge variant="default">
-                    {statusLabels[project.status]}
+                    {
+                      PUBLIC_PHASE_LABELS[
+                        projectData.currentPhase as keyof typeof PUBLIC_PHASE_LABELS
+                      ]
+                    }
                   </Badge>
                 </CardContent>
               </Card>
@@ -246,24 +288,26 @@ export default function ProjectDetail() {
             <Card className="gradient-card border-primary/20">
               <CardContent className="space-y-4">
                 <ProgressBar
-                  current={project.totalRaised}
-                  target={project.softCap}
+                  current={totalSoldUSDC}
+                  softCap={softCapUSDC}
+                  target={Number(formatUnits(projectData.totalFractions, 18))}
                 />
 
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="text-muted-foreground">Retorno Total</p>
+                    <p className="text-muted-foreground">Meta Total</p>
                     <p className="font-bold text-lg">
-                      ${project.targetReturn.toLocaleString()}
+                      $
+                      {Number(
+                        formatUnits(projectData.totalFractions, 18)
+                      ).toLocaleString()}{" "}
+                      USDC
                     </p>
                   </div>
                   <div>
-                    <p className="text-muted-foreground">Ganancia</p>
+                    <p className="text-muted-foreground">Soft Cap</p>
                     <p className="font-bold text-lg text-primary">
-                      $
-                      {(
-                        project.targetReturn - project.softCap
-                      ).toLocaleString()}
+                      ${softCapUSDC.toLocaleString()} USDC
                     </p>
                   </div>
                 </div>
@@ -274,8 +318,9 @@ export default function ProjectDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="invest" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
             <TabsTrigger value="invest">Invertir</TabsTrigger>
+            <TabsTrigger value="roi">ROI Análisis</TabsTrigger>
             <TabsTrigger value="details">Detalles</TabsTrigger>
             <TabsTrigger value="documents">Documentos</TabsTrigger>
           </TabsList>
@@ -290,12 +335,17 @@ export default function ProjectDetail() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {project.status !== "active" ? (
+                {projectData.currentPhase !== 0 ? (
                   <Alert>
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
                       Este proyecto ya no está aceptando inversiones. Estado
-                      actual: {statusLabels[project.status]}
+                      actual:{" "}
+                      {
+                        PUBLIC_PHASE_LABELS[
+                          projectData.currentPhase as keyof typeof PUBLIC_PHASE_LABELS
+                        ]
+                      }
                     </AlertDescription>
                   </Alert>
                 ) : availableToInvest <= 0 ? (
@@ -329,8 +379,8 @@ export default function ProjectDetail() {
                       />
                       <p className="text-xs text-muted-foreground">
                         Disponible para invertir: $
-                        {availableToInvest.toLocaleString()} USDT • Inversión
-                        mínima: $100 USDT
+                        {availableToInvest.toLocaleString()} USDC • Inversión
+                        mínima: $100 USDC
                       </p>
                     </div>
 
@@ -343,8 +393,8 @@ export default function ProjectDetail() {
                       {isApproving
                         ? "Aprobando USDC..."
                         : isInvesting
-                          ? "Procesando inversión..."
-                          : "Invertir Ahora"}
+                        ? "Procesando inversión..."
+                        : "Invertir Ahora"}
                     </Button>
 
                     <div className="text-xs text-muted-foreground space-y-1 pt-2">
@@ -364,6 +414,118 @@ export default function ProjectDetail() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="roi" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Análisis Detallado de ROI
+                </CardTitle>
+                <CardDescription>
+                  Proyección de retornos y análisis de rentabilidad
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid lg:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-lg">
+                      Resumen Financiero
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">
+                          Inversión Total Requerida:
+                        </span>
+                        <span className="font-bold">
+                          ${roiData.investmentAmount.toLocaleString()} USDC
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">
+                          Retorno Total Esperado:
+                        </span>
+                        <span className="font-bold text-primary">
+                          ${roiData.expectedReturn.toLocaleString()} USDC
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-green-50 border border-green-200">
+                        <span className="text-green-700">Ganancia Neta:</span>
+                        <span className="font-bold text-green-700">
+                          +${roiData.netProfit.toLocaleString()} USDC
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-primary/10 border border-primary/20">
+                        <span className="text-primary">ROI Porcentual:</span>
+                        <span className="font-bold text-primary text-xl">
+                          {roiData.roiPercentage.toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-lg">
+                      Métricas de Tiempo
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">
+                          Duración del Proyecto:
+                        </span>
+                        <span className="font-bold">
+                          {Math.ceil(
+                            roiData.timeToMaturity / (60 * 60 * 24 * 30)
+                          )}{" "}
+                          meses
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">
+                          ROI Anualizado:
+                        </span>
+                        <span className="font-bold text-primary">
+                          {(
+                            roiData.roiPercentage /
+                              (roiData.timeToMaturity / (60 * 60 * 24 * 365)) ||
+                            0
+                          ).toFixed(2)}
+                          %
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">
+                          Inicio de Inversiones:
+                        </span>
+                        <span className="font-bold">
+                          {formatDate(Number(projectData.startTime))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                        <span className="text-muted-foreground">
+                          Fecha de Retorno:
+                        </span>
+                        <span className="font-bold">
+                          {formatDate(Number(projectData.maxRepaymentTime))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Nota importante:</strong> Las proyecciones de ROI
+                    están basadas en el {projectData.possibleReturn}% de retorno
+                    configurado en el smart contract. Los rendimientos reales
+                    pueden variar según el desempeño del proyecto inmobiliario y
+                    las condiciones del mercado.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="details" className="space-y-6">
             <div className="grid lg:grid-cols-2 gap-6">
               <Card>
@@ -379,38 +541,23 @@ export default function ProjectDetail() {
                       Fecha de inicio
                     </p>
                     <p className="font-medium">
-                      {new Date(project.startDate).toLocaleDateString("es-ES", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })}
+                      {formatDate(Number(projectData.startTime))}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Fecha estimada de finalización
+                      Fin período de compra
                     </p>
                     <p className="font-medium">
-                      {new Date(project.estimatedCompletion).toLocaleDateString(
-                        "es-ES",
-                        {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        }
-                      )}
+                      {formatDate(Number(projectData.buyingPeriodEnd))}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Duración del proyecto
+                      Retorno máximo en
                     </p>
                     <p className="font-medium">
-                      {Math.ceil(
-                        (project.estimatedCompletion - project.startDate) /
-                          (1000 * 60 * 60 * 24 * 30)
-                      )}{" "}
-                      meses
+                      {formatDate(Number(projectData.maxRepaymentTime))}
                     </p>
                   </div>
                 </CardContent>
@@ -425,25 +572,27 @@ export default function ProjectDetail() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Soft Cap</p>
+                    <p className="text-sm text-muted-foreground">
+                      Inversión Total
+                    </p>
                     <p className="font-bold text-xl">
-                      ${project.softCap.toLocaleString()} USDT
+                      ${roiData.investmentAmount.toLocaleString()} USDC
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Recaudado actual
+                      Retorno Esperado
                     </p>
                     <p className="font-bold text-xl text-primary">
-                      ${project.totalRaised.toLocaleString()} USDT
+                      ${roiData.expectedReturn.toLocaleString()} USDC
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Retorno planeado
+                      Ganancia Neta
                     </p>
-                    <p className="font-bold text-xl">
-                      ${project.targetReturn.toLocaleString()} USDT
+                    <p className="font-bold text-xl text-green-600">
+                      +${roiData.netProfit.toLocaleString()} USDC
                     </p>
                   </div>
                 </CardContent>
@@ -464,7 +613,12 @@ export default function ProjectDetail() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {project.documents.map((doc, idx) => (
+                  {[
+                    { name: "Planos del Proyecto", url: projectData.url },
+                    { name: "Análisis de Mercado", url: projectData.url },
+                    { name: "Documentación Legal", url: projectData.url },
+                    { name: "Evaluación Técnica", url: projectData.url },
+                  ].map((doc, idx) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
