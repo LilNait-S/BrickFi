@@ -5,8 +5,19 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useGetAllProjects } from "@/services/pool/query"
+import { dataMock } from "@/data/images"
 import { Search } from "lucide-react"
 import { useMemo, useState } from "react"
+import { Address } from "viem"
+
+// Función para mapear un address del contrato a un ID consistente del mock de imágenes
+function getImageMockFromAddress(address: Address): (typeof dataMock)[0] {
+  // Convertir el hex del address a un número y usar módulo para seleccionar del array
+  const hex = address.toLowerCase().replace("0x", "")
+  const numericValue = parseInt(hex.slice(-8), 16) // Usar los últimos 8 caracteres del hex
+  const mockIndex = numericValue % dataMock.length
+  return dataMock[mockIndex]
+}
 
 const projectStatuses = [
   { value: "all", label: "Todos" },
@@ -19,7 +30,6 @@ const projectStatuses = [
 
 export default function ProyectosPage() {
   const { projects, isLoading, error } = useGetAllProjects()
-  console.log("projects", projects)
 
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStatus, setSelectedStatus] = useState<string | number>("all")
@@ -114,9 +124,16 @@ export default function ProyectosPage() {
           </div>
         ) : filteredProjects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredProjects.map((project) => (
-              <ProjectCard key={project.contractAddress} project={project} />
-            ))}
+            {filteredProjects.map((project) => {
+              const imageMock = getImageMockFromAddress(project.contractAddress)
+              return (
+                <ProjectCard
+                  key={project.contractAddress}
+                  project={project}
+                  imageUrl={imageMock.images[0]} // Usar la primera imagen del mock
+                />
+              )
+            })}
           </div>
         ) : (
           <div className="text-center py-12">
