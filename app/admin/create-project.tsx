@@ -13,15 +13,12 @@ import {
   useCreateProject,
   useWhiteListToCreateProject,
 } from "@/services/tokenizer/mutate"
-import { useGetInstances } from "@/services/tokenizer/query"
 import { Loader2, Shield, UserCheck } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
-import { Address, parseUnits } from "viem"
+import { Address } from "viem"
 
 export function CreateProject() {
-  const { data: address } = useGetInstances()
-  console.log("address from useGetAddress:", address)
   // Estado del formulario de crear proyecto
   const [projectForm, setProjectForm] = useState({
     name: "",
@@ -35,7 +32,6 @@ export function CreateProject() {
   })
 
   const [projectImageFile, setProjectImageFile] = useState<File | null>(null)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
 
   // Estado para whitelist
   const [addressToWhitelist, setAddressToWhitelist] = useState("")
@@ -49,8 +45,8 @@ export function CreateProject() {
         )
         setAddressToWhitelist("")
       },
-      onError: (error) => {
-        toast.error(error.message)
+      onError: () => {
+        toast.error("Error al verificar KYC. Intenta nuevamente.")
       },
     },
   })
@@ -73,8 +69,8 @@ export function CreateProject() {
         })
         setProjectImageFile(null)
       },
-      onError: (error) => {
-        toast.error(error.message)
+      onError: () => {
+        toast.error("Error al crear el proyecto. Intenta nuevamente.")
       },
     },
   })
@@ -93,56 +89,6 @@ export function CreateProject() {
     return num.toLocaleString("en-US", {
       maximumFractionDigits: 2,
     })
-  }
-
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      // Validar que sea imagen
-      if (!file.type.startsWith("image/")) {
-        toast.error("El archivo debe ser una imagen")
-        return
-      }
-      setProjectImageFile(file)
-      // Resetear CID si cambia la imagen
-      setProjectForm({ ...projectForm, imageCid: "" })
-    }
-  }
-
-  const handleUploadImage = async () => {
-    if (!projectImageFile) {
-      toast.error("Selecciona una imagen primero")
-      return
-    }
-
-    setIsUploadingImage(true)
-
-    try {
-      const formData = new FormData()
-      formData.append("file", projectImageFile)
-
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al subir imagen")
-      }
-
-      // Guardar el CID en el formulario
-      setProjectForm({ ...projectForm, imageCid: data.cid })
-      toast.success("Imagen subida exitosamente a IPFS")
-    } catch (error) {
-      console.error("Error subiendo imagen:", error)
-      toast.error(
-        error instanceof Error ? error.message : "Error al subir la imagen"
-      )
-    } finally {
-      setIsUploadingImage(false)
-    }
   }
 
   const handleCreateProject = async (e: React.FormEvent) => {
@@ -175,15 +121,15 @@ export function CreateProject() {
         name: projectForm.name,
         symbol: projectForm.symbol,
         url: projectForm.url, // URL externa del proyecto (no la imagen)
-        softCap: parseUnits(projectForm.softcap, 6),
-        fraction: parseUnits(projectForm.fractions, 6),
+        softCap: BigInt(projectForm.softcap),
+        fraction: BigInt(projectForm.fractions),
         repaymentTime: parseInt(projectForm.repaymentTime),
         possibleReturn: parseFloat(projectForm.possibleReturn),
       })
     } catch (error) {
       console.error("Error creando proyecto:", error)
       toast.error(
-        error instanceof Error ? error.message : "Error al crear el proyecto"
+        "Error al crear el proyecto. Verifica los datos e intenta nuevamente."
       )
     }
   }
@@ -199,9 +145,7 @@ export function CreateProject() {
     } catch (error) {
       console.error("Error whitelisting:", error)
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Error al autorizar la dirección"
+        "Error al verificar KYC. Verifica la dirección e intenta nuevamente."
       )
     }
   }
@@ -267,7 +211,8 @@ export function CreateProject() {
             {whitelistMutation.error && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  <strong>Error:</strong> {whitelistMutation.error.message}
+                  Error al verificar KYC. Verifica la dirección e intenta
+                  nuevamente.
                 </AlertDescription>
               </Alert>
             )}
@@ -441,74 +386,6 @@ export function CreateProject() {
                 </p>
               </div>
 
-              {/* Imagen del Proyecto */}
-              <div className="space-y-2 md:col-span-2">
-                {/* <Label htmlFor="projectImage">
-                  Imagen del Proyecto{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="projectImage"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageFileChange}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Imagen que se subirá a IPFS/Filecoin (almacenamiento
-                  descentralizado)
-                </p> */}
-
-                {/* Botón para subir imagen */}
-                {/* {projectImageFile && !projectForm.imageCid && (
-                  <Button
-                    type="button"
-                    onClick={handleUploadImage}
-                    disabled={isUploadingImage}
-                    variant="secondary"
-                    size="sm"
-                    className="mt-2"
-                  >
-                    {isUploadingImage ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Subiendo a IPFS...
-                      </>
-                    ) : (
-                      "Subir imagen a IPFS/Filecoin"
-                    )}
-                  </Button>
-                )} */}
-
-                {/* Mostrar CID si existe */}
-                {/* {projectForm.imageCid && (
-                  <Alert className="mt-2 bg-green-500/10 border-green-500/20">
-                    <Shield className="h-4 w-4 text-green-500" />
-                    <AlertDescription className="text-green-500">
-                      <p className="font-semibold mb-1">
-                        ✓ Imagen subida exitosamente a IPFS
-                      </p>
-                      <p className="text-xs">
-                        <strong>CID:</strong>{" "}
-                        <code className="bg-green-500/10 px-1 rounded">
-                          {projectForm.imageCid}
-                        </code>
-                      </p>
-                      <p className="text-xs mt-1">
-                        Ver en:{" "}
-                        <a
-                          href={`https://ipfs.io/ipfs/${projectForm.imageCid}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline hover:text-green-400"
-                        >
-                          https://ipfs.io/ipfs/{projectForm.imageCid}
-                        </a>
-                      </p>
-                    </AlertDescription>
-                  </Alert>
-                )} */}
-              </div>
-
               {/* URL */}
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="url">URL del Proyecto</Label>
@@ -573,7 +450,8 @@ export function CreateProject() {
             {createProjectMutation.error && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  <strong>Error:</strong> {createProjectMutation.error.message}
+                  Error al crear el proyecto. Verifica los datos e intenta
+                  nuevamente.
                 </AlertDescription>
               </Alert>
             )}
@@ -581,8 +459,7 @@ export function CreateProject() {
             {createProjectMutation.projectReceiptError && (
               <Alert variant="destructive" className="mt-4">
                 <AlertDescription>
-                  <strong>Error en transacción:</strong>{" "}
-                  {createProjectMutation.projectReceiptError.message}
+                  Error en la transacción. Intenta nuevamente.
                 </AlertDescription>
               </Alert>
             )}
