@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Address } from "viem"
 import { useWaitForTransactionReceipt, useWriteContract } from "wagmi"
-import { PoolConfig } from "./config"
+import { poolConfig } from "./config"
 
 interface Options {
   onSuccess?: () => void
@@ -26,7 +26,7 @@ export function useInvestInProject({ options }: { options?: Options } = {}) {
   // -----------------------------
   const investReceipt = useWaitForTransactionReceipt({
     hash: createHash,
-    chainId: PoolConfig.chainId,
+    chainId: poolConfig.chainId,
   })
 
   // -----------------------------
@@ -61,7 +61,7 @@ export function useInvestInProject({ options }: { options?: Options } = {}) {
       setError(null)
 
       const hash = await writeContractAsync({
-        ...PoolConfig,
+        ...poolConfig,
         functionName: "buyShares",
         args: [amountToInvest],
       })
